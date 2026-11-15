@@ -5,6 +5,9 @@ on:
      types:
        - published
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,7 +24,9 @@ jobs:
       - name: Build artifacts
         run: ./gradlew build
       - name: Upload assets to GitHub
-        uses: AButler/upload-release-assets@v2.0
+        uses: softprops/action-gh-release@v2
         with:
-          files: 'build/libs/*;LICENSE.txt;NOTICE.md'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            build/libs/*.jar
+            LICENSE.txt
+            NOTICE.md
