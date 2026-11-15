@@ -13,7 +13,7 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: 17
-    - name: Cache/Uncache Sodium
+    - name: Cache/Uncache Dosium
       uses: actions/cache@v4
       with:
         path: |
@@ -35,6 +35,6 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: sodium-artifacts-${{ steps.ref.outputs.branch }}
+        name: dosium-artifacts-${{ steps.ref.outputs.branch }}
         # Filter built files to disregard -sources and -dev, and leave only the minecraft-compatible jars.
         path: build/libs/*[0-9].jar
