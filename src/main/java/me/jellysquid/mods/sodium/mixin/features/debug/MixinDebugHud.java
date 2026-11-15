@@ -82,7 +82,15 @@ public abstract class MixinDebugHud {
             int budgetPct = ApuBudgetController.getBudgetUsagePercent();
             Formatting budgetColor = budgetPct > 80 ? Formatting.GOLD : Formatting.GREEN;
 
-            strings.add(String.format(Locale.ROOT, "GPU Cull: %.2f ms | GPU Mesh: %.2f ms", cullMs, meshMs));
+            String cullText = ComputeQueueManager.isCullPipelineReady()
+                    ? String.format(Locale.ROOT, "GPU Cull: %.2f ms", cullMs)
+                    : "GPU Cull: Fallback CPU (" + ComputeQueueManager.getCullFallbackReason() + ")";
+
+            String meshText = ComputeQueueManager.isMeshPipelineReady()
+                    ? String.format(Locale.ROOT, "GPU Mesh: %.2f ms", meshMs)
+                    : "GPU Mesh: Fallback CPU (" + ComputeQueueManager.getMeshFallbackReason() + ")";
+
+            strings.add(cullText + " | " + meshText);
             strings.add("APU Budget: " + budgetColor + budgetPct + "%" + Formatting.RESET
                     + " | " + ComputeMeshDispatcher.getActiveModeShortName());
             strings.add("Memory Path: " + UmaBufferBridge.getStatusText());
