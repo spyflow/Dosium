@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "dosium",
+  "provides": [
+    "sodium",
+    "vulkanmod"
+  ],
+  "version": "${version}",
+  "name": "Dosium",
+  "description": "Dosium es un motor de renderizado híbrido GPU-Driven (Vulkan Compute + UMA Zero-Copy) para Minecraft 1.20.4, derivado de Sodium (CaffeineMC) y VulkanMod (xCollateral) bajo licencia LGPL-3.0-only.",
+  "authors": [
+    "spyflow"
+  ],
+  "contributors": [
+    "JellySquid & CaffeineMC (Sodium - Base LGPL-3.0)",
+    "xCollateral & Colaboradores (VulkanMod - Base LGPL-3.0)",
+    "Skypixel-ECAS (Sodium-Vulkan - Base LGPL-3.0)"
+  ],
+  "contact": {
+    "homepage": "https://github.com/spyflow/dosium",
+    "sources": "https://github.com/spyflow/dosium",
+    "issues": "https://github.com/spyflow/dosium/issues"
+  },
+  "license": "LGPL-3.0-only",
+  "icon": "assets/sodium/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "me.jellysquid.mods.sodium.client.SodiumClientMod",
+      "net.vulkanmod.Initializer"
+    ],
+    "preLaunch": [
+      "me.jellysquid.mods.sodium.client.SodiumPreLaunch"
+    ]
+  },
+  "custom": {
+    "fabric-renderer-api-v1:contains_renderer": true
+  },
+  "accessWidener": "sodium.accesswidener",
+  "mixins": [
+    "sodium.mixins.json",
+    "vulkanmod.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.20.4",
+    "fabric-rendering-data-attachment-v1": ">=0.1",
+    "fabric-rendering-fluids-v1": ">=0.1"
+  },
+  "breaks": {
+    "optifabric": "*",
+    "canvas": "*"
+  }
+}

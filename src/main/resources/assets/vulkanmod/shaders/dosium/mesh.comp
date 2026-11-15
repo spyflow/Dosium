@@ -1,0 +1,78 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 4) in;
+
+// Packed 18x18x18 block state palette indices (2 uint16 per uint32)
+layout(std430, set = 0, binding = 0) readonly buffer SectionVoxelBuffer {
+    uint packedVoxels[];
+};
+
+// Compressed Sodium/VulkanMod terrain vertex output (20 bytes = 5 uint32 per vertex)
+layout(std430, set = 0, binding = 1) writeonly buffer TerrainVertexBuffer {
+    uint vertexData[];
+};
+
+layout(std430, set = 0, binding = 2) buffer MeshCounterBuffer {
+    uint quadCount;
+};
+
+layout(push_constant) uniform MeshPushConstants {
+    ivec4 sectionOrigin; // xyz = chunk section block offset, w = maxQuads
+} pc;
+
+const ivec3 FACE_DIRS[6] = ivec3[6](
+    ivec3( 0, -1,  0),
+    ivec3( 0,  1,  0),
+    ivec3( 0,  0, -1),
+    ivec3( 0,  0,  1),
+    ivec3(-1,  0,  0),
+    ivec3( 1,  0,  0)
+);
+
+uint sampleVoxel(ivec3 p) {
+    // p is in [0..17]^3
+    int flatIdx = (p.y * 18 + p.z) * 18 + p.x;
+    uint word = packedVoxels[flatIdx >> 1];
+    return ((flatIdx & 1) == 0) ? (word & 0xFFFFu) : (word >> 16);
+}
+
+bool isOpaqueBlock(uint stateId) {
+    return (stateId & 0x8000u) != 0u;
+}
+
+void main() {
+    ivec3 localPos = ivec3(gl_GlobalInvocationID.xyz);
+    if (localPos.x >= 16 || localPos.y >= 16 || localPos.z >= 16) {
+        return;
+    }
+
+    ivec3 voxelPos = localPos + ivec3(1, 1, 1);
+    uint selfState = sampleVoxel(voxelPos);
+    if ((selfState & 0x7FFFu) == 0u) {
+        return; // Air block
+    }
+
+    for (int face = 0; face < 6; ++face) {
+        ivec3 neighborPos = voxelPos + FACE_DIRS[face];
+        uint neighborState = sampleVoxel(neighborPos);
+        if (isOpaqueBlock(neighborState)) {
+            continue; // Occluded face
+        }
+
+        uint quadIdx = atomicAdd(quadCount, 1u);
+        if (quadIdx >= uint(pc.sectionOrigin.w)) {
+            return;
+        }
+
+        uint baseUint = quadIdx * 20u; // 4 vertices * 5 uints
+        uint packedPos = (uint(localPos.x) & 0xFFu) | ((uint(localPos.y) & 0xFFu) << 8) | ((uint(localPos.z) & 0xFFu) << 16);
+        for (uint v = 0u; v < 4u; ++v) {
+            uint offset = baseUint + v * 5u;
+            vertexData[offset + 0u] = packedPos;
+            vertexData[offset + 1u] = uint(face);
+            vertexData[offset + 2u] = 0xFFFFFFFFu; // Color RGBA
+            vertexData[offset + 3u] = 0u;          // UV
+            vertexData[offset + 4u] = 0x00F000F0u; // Packed Lightmap
+        }
+    }
+}

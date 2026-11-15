@@ -1,0 +1,29 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D u_SourceDepth;
+layout(r32f, set = 0, binding = 1) uniform writeonly image2D u_DestMip;
+
+layout(push_constant) uniform HiZPushConstants {
+    ivec2 srcDimensions;
+    ivec2 dstDimensions;
+} pc;
+
+void main() {
+    ivec2 dstCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (dstCoord.x >= pc.dstDimensions.x || dstCoord.y >= pc.dstDimensions.y) {
+        return;
+    }
+
+    vec2 invSrc = 1.0 / vec2(pc.srcDimensions);
+    vec2 baseUv = (vec2(dstCoord * 2) + 0.5) * invSrc;
+
+    float d0 = textureLod(u_SourceDepth, baseUv, 0.0).r;
+    float d1 = textureLod(u_SourceDepth, baseUv + vec2(invSrc.x, 0.0), 0.0).r;
+    float d2 = textureLod(u_SourceDepth, baseUv + vec2(0.0, invSrc.y), 0.0).r;
+    float d3 = textureLod(u_SourceDepth, baseUv + invSrc, 0.0).r;
+
+    float maxDepth = max(max(d0, d1), max(d2, d3));
+    imageStore(u_DestMip, dstCoord, vec4(maxDepth, 0.0, 0.0, 0.0));
+}

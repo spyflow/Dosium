@@ -1,0 +1,42 @@
+#version 450
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle {
+    vec4 positionAndAge;     // xyz = pos, w = age
+    vec4 velocityAndMaxAge;  // xyz = vel, w = maxAge
+    vec4 color;
+};
+
+layout(std430, set = 0, binding = 0) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+layout(push_constant) uniform ParticlePushConstants {
+    vec4 dtAndGravity; // x = dt, y = gravity, z = drag, w = count
+} pc;
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    uint count = uint(pc.dtAndGravity.w);
+    if (idx >= count) {
+        return;
+    }
+
+    Particle p = particles[idx];
+    float age = p.positionAndAge.w + pc.dtAndGravity.x;
+    if (age >= p.velocityAndMaxAge.w) {
+        p.positionAndAge.w = p.velocityAndMaxAge.w;
+        particles[idx] = p;
+        return;
+    }
+
+    vec3 vel = p.velocityAndMaxAge.xyz;
+    vel.y -= pc.dtAndGravity.y * pc.dtAndGravity.x;
+    vel *= pc.dtAndGravity.z;
+
+    p.positionAndAge.xyz += vel * pc.dtAndGravity.x;
+    p.positionAndAge.w = age;
+    p.velocityAndMaxAge.xyz = vel;
+    particles[idx] = p;
+}

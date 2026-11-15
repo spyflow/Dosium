@@ -1,0 +1,153 @@
+import net.fabricmc.loom.task.RemapJarTask
+
+plugins {
+    id 'fabric-loom' version '1.6-SNAPSHOT'
+}
+
+apply from: "${rootProject.projectDir}/gradle/fabric.gradle"
+apply from: "${rootProject.projectDir}/gradle/java.gradle"
+
+archivesBaseName = "${project.archives_base_name}-mc${project.minecraft_version}"
+version = "${project.mod_version}+${getVersionMetadata()}"
+group = project.maven_group
+
+loom {
+    mixin.defaultRefmapName = "mixins.sodium.refmap.json"
+    accessWidenerPath = file("src/main/resources/sodium.accesswidener")
+}
+
+configurations {
+    modIncludeImplementation
+
+    include.extendsFrom modIncludeImplementation
+    modImplementation.extendsFrom modIncludeImplementation
+}
+
+sourceSets {
+    api {
+        java {
+            compileClasspath += main.compileClasspath
+        }
+    }
+
+    main {
+        java {
+            compileClasspath += api.output
+            runtimeClasspath += api.output
+        }
+    }
+}
+
+tasks.named('compileJava', JavaCompile) {
+    dependsOn apiClasses
+    doFirst {
+        classpath = sourceSets.api.output + classpath
+    }
+}
+
+tasks.register('apiJar', Jar) {
+    archiveClassifier.set("api-dev")
+
+    from(sourceSets.api.output) {
+        exclude 'net/vulkanmod/**'
+    }
+}
+
+tasks.register('remapApiJar', RemapJarTask) {
+    dependsOn apiJar
+    archiveClassifier.set("api")
+
+    inputFile.set(apiJar.archiveFile)
+    addNestedDependencies = false
+}
+
+build.dependsOn apiJar
+build.dependsOn remapApiJar
+
+jar {
+    from(sourceSets.api.output.classesDirs) {
+        exclude 'net/vulkanmod/**'
+    }
+    from sourceSets.api.output.resourcesDir
+}
+
+dependencies {
+    //to change the versions see the gradle.properties file
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    // Fabric API
+    modIncludeImplementation(fabricApi.module("fabric-api-base", project.fabric_version))
+    modIncludeImplementation(fabricApi.module("fabric-rendering-fluids-v1", project.fabric_version))
+    modIncludeImplementation(fabricApi.module("fabric-rendering-data-attachment-v1", project.fabric_version))
+    modIncludeImplementation(fabricApi.module("fabric-resource-loader-v0", project.fabric_version))
+
+    // Embedded LWJGL Vulkan / VMA / Shaderc libraries and VulkanMod classes
+    compileOnly files('vulkan-embedded')
+    compileOnly fileTree(dir: 'vulkan-embedded/META-INF/jars', include: '*.jar')
+}
+
+remapJar {
+    doLast {
+        def jarFile = archiveFile.get().asFile
+        def tempDir = file("${buildDir}/tmp/vulkan-merge")
+        tempDir.deleteDir()
+        tempDir.mkdirs()
+
+        def zf = new java.util.zip.ZipFile(jarFile)
+        def entry = zf.getEntry("fabric.mod.json")
+        def modJsonText = zf.getInputStream(entry).getText("UTF-8")
+        zf.close()
+
+        def slurper = new groovy.json.JsonSlurper()
+        def modJson = slurper.parseText(modJsonText)
+        if (modJson.jars == null) {
+            modJson.jars = []
+        }
+        def existingFiles = modJson.jars.collect { it.file } as Set
+        fileTree(dir: 'vulkan-embedded/META-INF/jars', include: '*.jar').files.sort { it.name }.each { f ->
+            def relPath = "META-INF/jars/${f.name}".toString()
+            if (!existingFiles.contains(relPath)) {
+                modJson.jars.add([file: relPath])
+            }
+        }
+
+        def outModJson = new File(tempDir, "fabric.mod.json")
+        outModJson.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(modJson)), "UTF-8")
+
+        ant.zip(destfile: jarFile, update: true) {
+            fileset(dir: file('vulkan-embedded')) {
+                include(name: 'net/**')
+                exclude(name: 'net/vulkanmod/render/chunk/build/BlockRenderer*.class')
+                exclude(name: 'net/vulkanmod/render/chunk/build/TaskDispatcher*.class')
+                exclude(name: 'net/vulkanmod/render/chunk/graph/SectionGraph*.class')
+                exclude(name: 'net/vulkanmod/render/chunk/buffer/UploadManager*.class')
+                exclude(name: 'net/vulkanmod/vulkan/memory/MemoryTypes*.class')
+                include(name: 'assets/**')
+                include(name: 'META-INF/jars/*.jar')
+                include(name: 'vulkanmod.mixins.json')
+                include(name: 'VulkanMod_1.20.4-refmap.json')
+                include(name: 'LICENSE_VulkanMod_1.20.4')
+            }
+            fileset(dir: tempDir) {
+                include(name: 'fabric.mod.json')
+            }
+            fileset(dir: rootProject.projectDir) {
+                include(name: 'LICENSE.txt')
+                include(name: 'NOTICE.md')
+            }
+        }
+    }
+}
+
+def getVersionMetadata() {
+    def build_id = System.getenv("GITHUB_RUN_NUMBER")
+
+    // CI builds only
+    if (build_id != null) {
+        return "build.${build_id}"
+    }
+
+    return "1.20.4"
+}

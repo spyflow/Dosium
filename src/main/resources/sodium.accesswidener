@@ -1,0 +1,36 @@
+accessWidener v1 named
+
+accessible class net/minecraft/world/biome/Biome$Weather
+accessible field net/minecraft/world/biome/Biome weather Lnet/minecraft/world/biome/Biome$Weather;
+accessible field net/minecraft/world/biome/Biome$Weather downfall F
+
+accessible class net/minecraft/client/model/ModelPart$Vertex
+accessible class net/minecraft/client/model/ModelPart$Quad
+accessible class net/minecraft/client/texture/SpriteContents$Interpolation
+accessible class net/minecraft/client/texture/SpriteContents$Animation
+accessible class net/minecraft/client/texture/SpriteContents$AnimationFrame
+accessible class net/minecraft/client/texture/SpriteContents$AnimatorImpl
+accessible class net/minecraft/world/chunk/PalettedContainer$Data
+accessible class net/minecraft/world/chunk/PalettedContainer$DataProvider
+accessible class net/minecraft/client/render/BackgroundRenderer$FogData
+accessible class net/minecraft/client/render/BackgroundRenderer$StatusEffectFogModifier
+accessible class net/minecraft/client/texture/TextureStitcher$Holder
+
+accessible method net/minecraft/client/render/Frustum isVisible (DDDDDD)Z
+accessible method net/minecraft/client/texture/SpriteContents upload (IIII[Lnet/minecraft/client/texture/NativeImage;)V
+accessible method net/minecraft/client/render/BackgroundRenderer getFogModifier (Lnet/minecraft/entity/Entity;F)Lnet/minecraft/client/render/BackgroundRenderer$StatusEffectFogModifier;
+
+accessible field net/minecraft/client/texture/NativeImage pointer J
+
+accessible field net/minecraft/client/render/VertexFormat offsets Lit/unimi/dsi/fastutil/ints/IntList;
+accessible method net/minecraft/client/util/math/MatrixStack$Entry <init> (Lorg/joml/Matrix4f;Lorg/joml/Matrix3f;)V
+
+accessible field net/minecraft/client/color/world/GrassColors colorMap [I
+accessible field net/minecraft/client/color/world/FoliageColors colorMap [I
+
+accessible field net/minecraft/client/render/BufferBuilder buffer Ljava/nio/ByteBuffer;
+accessible field net/minecraft/client/render/BufferBuilder elementOffset I
+accessible class net/minecraft/client/gui/hud/InGameHud$HeartType
+accessible class net/minecraft/client/render/OutlineVertexConsumerProvider$OutlineVertexConsumer
+accessible field com/mojang/blaze3d/systems/RenderSystem vertexSorting Lcom/mojang/blaze3d/systems/VertexSorter;
+accessible field net/minecraft/client/render/RenderPhase name Ljava/lang/String;
